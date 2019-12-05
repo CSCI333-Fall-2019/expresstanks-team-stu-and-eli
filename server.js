@@ -1,11 +1,12 @@
-
 var express = require('express');
 var app = express();
 const request = require('request');
+const dropFile = require("./public/js/drops.js");
 
 // Game items to remember
 var tanks = [];
 var shots = [];
+var drops = []; //Eli and Stu 11/21
 
 // Set up the server
 // process.env.PORT is related to deploying on AWS
@@ -52,6 +53,13 @@ io.sockets.on('connection',
   // We are given a websocket object in our function
   function (socket) {
   
+    (function(){ //Stu and Eli 12/4
+      newDrop = dropFile.data.randomDrop();
+      socket.broadcast.emit('ServerNewDrop', newDrop); //for spawning drops
+      drops.push(newDrop);
+      setTimeout(arguments.callee, 30000);
+    })();
+
     console.log("New Tank: " + socket.id);
 
     // Initial Add of New Client
@@ -131,7 +139,16 @@ io.sockets.on('connection',
                 }
             }
         }
-
+        //---------Check for drop/tank intersection-------- Stu and Eli 12/4
+        for (var j = 0; j < tanks.length; j++) {
+          for (var i = 0; i < drops.length; i++) {
+             var distance = Math.sqrt(Math.pow((drops[i].loc[0] - tanks[j].x), 2) + Math.pow((drops[i].loc[1] - tanks[j].y), 2));
+             if (distance < 10.0) {
+                let dropHandler = { type : drops[i].type, locX : drops[i].loc[0], locY : drops[i].loc[1], tankID : tanks[j].tankid};
+                socket.broadcast.emit('ServerTankDropHit', dropHandler);
+             }
+          }
+        }
         
         // Send the change out
 //        io.sockets.emit('ServerMoveTank', data);
@@ -155,6 +172,10 @@ io.sockets.on('connection',
         io.sockets.emit('ServerTankRemove', socket.id);
 
     });
+
+    socket.on('ClientShield', function(tankid){
+      io.sockets.emit('TankShield', ShieldOn(data, tankid));
+    }); 
 
     // New Shot Object
     socket.on('ClientNewShot',
@@ -196,6 +217,7 @@ io.sockets.on('connection',
 
         // Look for hits with all tanks
         for (var t = tanks.length - 1; t >= 0; t--) {
+          
           // As long as it's not the tank that fired the shot
           if(shots[i].tankid == tanks[t].tankid)
             continue;
@@ -203,7 +225,13 @@ io.sockets.on('connection',
             var dist = Math.sqrt( Math.pow((shots[i].x-tanks[t].x), 2) + Math.pow((shots[i].y-tanks[t].y), 2) );
             console.log('Dist.: ' + dist);
 
-            if(dist < 20) {
+            if(dist < 20.0) {
+              //checks to see if the tank shot at has a shield active
+              if (tanks[t].shield == true) { //Eli and Stu 12/4
+                shots.splice(i, 1);
+                return;
+              }
+              else {
               console.log('HIT ------------------------');
               console.log('shotid: ' + shots[i].shotid);
               console.log('Shot-tankid: ' + shots[i].tankid);
@@ -220,6 +248,7 @@ io.sockets.on('connection',
               shots.splice(i, 1);
               // just return for now to keep from unknown errors
               return;
+              }
             }
           }
         }
@@ -242,7 +271,7 @@ io.sockets.on('connection',
           }
         }
       });
-
+      
     // Connected client moving Shots
     socket.on('ClientResetAll',
       function(data) {
