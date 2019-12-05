@@ -11,6 +11,8 @@ function Tank(startPos, tankColor, newtankid, playerName) {
     this.vel = createVector(0, 0);
     this.isBoosting = false;
     this.destroyed = false;
+    this.shield = true; //Eli and Stu 11/24
+    this.quicken = true; //Eli and Stu 12/4
     this.tankColor = tankColor;
     this.tankid = newtankid;
     this.playerName = playerName;
@@ -50,9 +52,10 @@ function Tank(startPos, tankColor, newtankid, playerName) {
           rect(0, -20, 4, 20);
           strokeWeight(6);
           point(0, 0);
+         
         }
         pop();
-
+        
         push();
         translate(this.pos.x, this.pos.y);
         fill(this.tankColor);
@@ -62,12 +65,29 @@ function Tank(startPos, tankColor, newtankid, playerName) {
         else
           text(this.playerName, 0, 30);
         pop();
+
+        //Creates the shield around the tank
+        if (this.shield == true) { //Eli and Stu 12/4
+        push();
+        translate(this.pos.x, this.pos.y);
+        stroke(173, 216, 230);
+        noFill();
+        circle(0, 0, 60);
+        pop();
+        }
+       
     }
 
     // Moving tank
     this.moveForward = function(a) {
       var force = p5.Vector.fromAngle(this.heading);
-      force.mult(a);
+      //used to speed up the tanks movement when buff is acquired
+      if (this.quicken == true) { //Eli and Stu 12/4
+        force.mult(a).mult(6);
+      }
+      else {
+        force.mult(a);
+      }
       this.vel.add(force);
     }
 
@@ -90,6 +110,7 @@ function Tank(startPos, tankColor, newtankid, playerName) {
       if (this.isBoosting) {
         this.boost();
       }
+      
       this.pos.add(this.vel);
     }
 }

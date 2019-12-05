@@ -2,6 +2,7 @@ var win;
 //var tank; // Just this instance of the tank
 let tanks = []; // All tanks in the game 
 let shots = []; // All shots in the game
+let drops = []; //Stu and Eli 12/4
 var mytankid;
 var myTankIndex = -1;
 
@@ -46,6 +47,8 @@ function setup() {
   socket.on('ServerResetAll', ServerResetAll);
   socket.on('ServerMoveShot', ServerMoveShot);
   socket.on('ServerNewShot', ServerNewShot);
+  socket.on('ServerNewDrop', ServerNewDrop); // Stu and Eli 12/4
+  socket.on('ServerTankDropHit', ServerTankDropHit); //Stu and Eli 12/4
 
   // Join (or start) a new game
   socket.on('connect', function(data) {
@@ -77,6 +80,23 @@ function draw() {
         socket.emit('ClientMoveShot', shotData);
       }
     }
+
+
+    //Drawing the Drops
+    for (var d = 0; d < drops.length; d++) {
+      if (drops[d].type == "shield") {
+        console.log("Inside If");
+        push();
+          translate(win.width/2, win.height/2);
+          fill(color(102, 179, 255));
+          rect(0, 0, 20, 20);
+        pop();
+      }
+      if (drops[d].type == "nuke") {
+      /*draw nuke code*/
+      }
+    }
+
     // Process all the tanks by iterating through the tanks array
     if(tanks && tanks.length > 0) {
       for (var t = 0; t < tanks.length; t++) {
@@ -121,9 +141,10 @@ function draw() {
           text("P", 0, 0);
         pop();
       pop();
-      */
-
+      */ 
     }
+    
+  }
 
       // To keep this program from being too chatty => Only send server info if something has changed
       if(tanks && tanks.length > 0 && myTankIndex > -1
@@ -136,7 +157,6 @@ function draw() {
         oldTanky = tanks[myTankIndex].pos.y;
         oldTankHeading = tanks[myTankIndex].heading;
       }
-    }
     
 
   // Handling pressing a Keys
@@ -183,6 +203,22 @@ function draw() {
 
   
   //  ***** Socket communication handlers ******
+  function ServerNewDrop(data) { //Stu and Eli 12/4
+    drops.push(data);
+  }
+
+
+  function ServerTankDropHit(data) { //Stu and Eli 12/4
+    //update tank with ability
+    socket.emit('ClientTankAbility', data.tankID);
+    for (var i = drops.length - 1; i >= 0; i--) {
+      if (data == drops[i]) {
+        drops.splice(i, 1);
+      }
+    }
+    //Remove drops from list / stop drawing
+  }
+
 
   function ServerReadyAddNew(data) {
     console.log('Server Ready');
@@ -248,8 +284,13 @@ function draw() {
 
       for (var i = tanks.length - 1; i >= 0; i--) {
         if(tanks[i].tankid == socketid) {
+          if (tank[i].shield == true) { //Eli and Stu 12/5
+            return;
+          }
+          else {
           tanks[i].destroyed = true;
           return;
+          }
         }
       }
     }
